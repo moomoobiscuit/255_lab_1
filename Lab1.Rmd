@@ -9,6 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 library("ggplot2")
 library("lattice")
+library("gridExtra")
 theme_update(plot.title = element_text(hjust = 0.5))
 theme_update(plot.subtitle = element_text(hjust = 0.5))
 ```
@@ -74,10 +75,27 @@ Some information about the clustering:
 
 ```{r, fig.height=6, fig.align='center'}
 titanicCluster$size    # size of each cluster
-titanicCluster$centers    # means of each cluster
 ```
 
-As you can see, the clustering is very skewed (53 in one cluster, 838 members in the other cluster). Looking at the cluster means, the ages do not vary too much but the fare paid by cluster 1 is much higher than that of cluster 2. 
+As you can see, the clustering is very skewed (53 in one cluster, 838 members in the other cluster).  How many people survived in the entire dataset?
+
+```{r}
+survivors = 0
+for (i in seq(1,length(titanic.df$Survived))) {
+     if (titanic.df$Survived[i] == 1) {
+         survivors = survivors + 1
+     }
+}
+print(survivors)
+```
+
+So there are 342 survivors, but only two clusters of 53 and 838. There will be a lot of overlap in the survivors/nonsurvivors in this particular clustering, and it is fairly inaccurate.
+
+```{r, fig.height=6, fig.align='center'}
+titanicCluster$centers    # means of each cluster
+```
+Looking at the cluster means, the ages do not vary too much but the fare paid by cluster 1 is much higher than that of cluster 2.
+
 Let's look at a table to see who survived/didn't survive in each cluster:
 
 ```{r, fig.height=6, fig.align='center'}
@@ -95,11 +113,11 @@ The rate of survival in cluster 2 is $303/(303+535) = 36.2\%$
 ```{r, fig.height=6, fig.width=10, fig.align='center'}
 # scatter plot of the two clusters in Age vs Fare attributes
 titanicCluster$cluster <- as.factor(titanicCluster$cluster)
-q = qplot(Age, Fare, data=titanic.df, colour = titanicCluster$cluster, na.rm = TRUE)
-q + ggtitle("Fare vs Age for Titanic Passengers", subtitle = "with clusters") + ylim(0, 300)
+p = qplot(Age, Fare, data=titanic.df, colour = titanicCluster$cluster, na.rm = TRUE)
+p + ggtitle("Fare vs Age for Titanic Passengers", subtitle = "with clusters") + ylim(0, 300)
 ```
 
-From the clustering algorithm and plot, we can see that cluster 1 has a significantly rate of survival than cluster 2. Through the plot, we can see that cluster 1 consists of people whos fare cost more than \$100, and cluster 2 consists of people whos fare is less than \$100, regardless of age. The conclusion drawn from this particular clustering is that people who had a higher fare had a higher chance of survival than those that paid a lesser fare. 
+From the clustering algorithm and plot, we can see that cluster 1 has a significantly rate of survival than cluster 2. Through the plot, we can see that cluster 1 consists of people whos fare cost more than \$100, and cluster 2 consists of people whos fare is less than \$100, regardless of age. The conclusion drawn from this particular clustering is that people who had a higher fare had a higher chance of survival than those that paid a lesser fare. However, this clustering is fairly inaccurate, as there are 342 survivors in the dataset but only supposedly 53 in this clustering. 
 
 ####c)
 
@@ -107,34 +125,75 @@ It was established by the scatter plot that age does not matter for this particu
 
 ####d)
 
-I think attributes that would cluster survivors/nonsurvivors well are: the passenger class, age, sex, siblings/spouses, parents/children.
+I think attributes that would cluster survivors well are: the passenger class, age, sex, siblings/spouses, parents/children.
 
 Lets try a clustering of 2 centres with pclass, age, sibsp, parch and sex, in hopes that our cluster will split survivors and nonsurvivors.
 If we want to cluster sex, which is non numeric attribute, we have to encode it, shown in the code below.
+One problem of comparing these attributes is, since we are comparing attributes like age which has a range from around 0 to 80, to other attributes like sex and pclass only have a range of 1-2 and 1-3, there is a large scale difference. One unit change in age is not too significant, but a one unit change in sex is literally life changing... To combat this, we can use the scale() function to properly scale our data before processing it. 
+
 ```{r, fig.height=6, fig.width=10, fig.align='center'}
 # encode the "Sex" attribute and add it into the titanic dataframe
 titanic.df = within(titanic.df, {Sex_encoded = as.numeric(as.factor(titanic.df$Sex))})
+
 # perform a k-means clustering using "Pclass", "Age", "Sibsp", "Parch" and "Sex" (encoded) attributes
+# with scaled values
 # with 2 clusters and 20 iterations
-titanicCluster2 = kmeans(titanic.df[c(3,6,7,8,19)], 2, nstart = 20, iter.max = 20)
-table(titanicCluster2$cluster, titanic.df$SurvivedFactor)
-p = qplot(Age, Fare, data=titanic.df, colour = titanicCluster2$cluster, na.rm = TRUE)
-p + ggtitle("Fare vs Age for Titanic Passengers", subtitle = "with clusters 2") + ylim(0, 300)
-
-# with scaled vals
-titanicCluster3 = kmeans(scale(titanic.df[c(3,6,7,8,19)]), 2, nstart = 20, iter.max = 20)
-titanicCluster3$size    # size of each cluster
-# columns are survived/not survived, rows are the two clusters created
-table(titanicCluster3$cluster, titanic.df$SurvivedFactor)
-r = qplot(Age, Fare, data=titanic.df, colour = titanicCluster3$cluster, na.rm = TRUE)
-r + ggtitle("Fare vs Age for Titanic Passengers", subtitle = "with clusters 3") + ylim(0, 300)
-
-
+titanicCluster2 = kmeans(scale(titanic.df[c(3,6,7,8,19)]), 2, nstart = 20, iter.max = 20)
 ```
 
+Some information about the clustering:
 
+```{r, fig.height=6, fig.width=10, fig.align='center'}
+titanicCluster2$size    # size of each cluster
+```
+Looks like this time, the clustering is much better at representing who actually survived or not. Unforunately, we can't check the means of each cluster as the data was scaled before being clustered, so we can't unscale it like normal. We can still check the results on plots though.
 
+```{r, fig.height=6, fig.width=10, fig.align='center'}
+# columns are survived/not survived, rows are the two clusters created
+table(titanicCluster2$cluster, titanic.df$SurvivedFactor)
+```
+This time, there looks to be a much better separation of survivors (compared to last clustering, in reference to our data).
 
+The rate of survival in cluster 1 is $252/(252+114) = 68.9\%$
+
+The rate of survival in cluster 2 is $90/(90+435) = 17.1\%$
+
+Lets check the plots to see if our clustering was somewhat successful. Again, red = not survived, blue = survived.
+Plots using clusters on the left, original data on the right:
+
+```{r, echo=FALSE}
+# rotate the cluster groups so 1 corresponds to died and 2 corresponds to survived
+# this is only a last resort to make the information look good on the plots below...
+# we can't reuse this particular cluster again...
+for (i in seq(1,length(titanicCluster2$cluster))){
+  if (titanicCluster2$cluster[i] == 1) {
+    titanicCluster2$cluster[i] = 2
+  } else if (titanicCluster2$cluster[i] == 2) {
+    titanicCluster2$cluster[i] = 1
+  }
+}
+```
+
+```{r, fig.height=6, fig.width=12, fig.align='center', echo=FALSE}
+# scatter plot of the two clusters in Age vs Fare attributes
+titanicCluster2$cluster <- as.factor(titanicCluster2$cluster)
+p = qplot(Age, Fare, data=titanic.df, colour = titanicCluster2$cluster, na.rm = TRUE) + ggtitle("Fare vs Age for Titanic Passengers", subtitle = "with clustering using 'Pclass', 'Age', 'SibSp', 'Parch' and 'Sex'") + ylim(0, 300) + theme(legend.position="none")
+p2 = qplot(Age, Fare, data=titanic.df, colour=SurvivedFactor, na.rm=TRUE) + ggtitle("Fare vs Age for Titanic Passengers", subtitle = "original") + geom_point(alpha = 0.5, na.rm=TRUE) + ylim(0, 300) + theme(legend.position="none")
+grid.arrange(p, p2, ncol=2)    # plot side by side
+
+# Sex vs Age
+q = qplot(Sex, Age, data=titanic.df, colour=titanicCluster2$cluster) + geom_jitter(alpha = 0.75) + ggtitle("Sex vs Age", subtitle = "with clustering using 'Pclass', 'Age', 'SibSp', 'Parch' and 'Sex'") + theme(legend.position="none")
+q2 = qplot(Sex, Age, data=titanic.df, colour=SurvivedFactor) + geom_jitter(alpha = 0.75) + ggtitle("Sex vs Age", subtitle = "original") + theme(legend.position="none")
+grid.arrange(q, q2, ncol=2)    # plot side by side
+
+# Pclass vs Fare
+# The three points that aren't in range were all class 1 and all survived
+r = qplot(PclassFactor, Fare, data=titanic.df, colour=titanicCluster2$cluster, na.rm=TRUE) + geom_jitter(alpha = 0.75, na.rm=TRUE) + ggtitle("Passenger Class vs Fare", subtitle = "with clustering using 'Pclass', 'Age', 'SibSp', 'Parch' and 'Sex'") + ylim(0, 300) + theme(legend.position="none")
+r2 = qplot(PclassFactor, Fare, data=titanic.df, colour=SurvivedFactor, na.rm=TRUE) + geom_jitter(alpha = 0.75, na.rm=TRUE) + ggtitle("Passenger Class vs Fare", subtitle = "original") + theme(legend.position="none") + ylim(0, 300)
+grid.arrange(r, r2, ncol=2)    # plot side by side
+```
+
+By looking at the multiple plots, we can see the fit is actually quite good. One thing it didn't tell was the low survival rate for passengers in Class 3, instead showing a good survival rate for those passengers. It seems like the clustering around the sex of passengers was prioritised very highly, as nearly all females survived in the clustered data. 
 
 
 
