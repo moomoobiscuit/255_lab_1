@@ -8,7 +8,9 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library("ggplot2")
-library("lattice")
+library("rpart")
+library("rpart.plot")
+library("rattle")
 library("gridExtra")
 theme_update(plot.title = element_text(hjust = 0.5))
 theme_update(plot.subtitle = element_text(hjust = 0.5))
@@ -272,4 +274,49 @@ grid.arrange(r, r2, ncol=2)    # plot side by side
 Without knowing the sex of a passenger, the k-means clustering algorithm believes a lot more passengers would have survived the Titanic accident. Looking at the male/female scatter plot, we can see no trend at all for survival rates between male and females. 
 
 In the end, it appears that the sex of passengers really is important for the k-means clustering algorithm to give a good determination of which passengers survive or not. 
+
+##Question 3
+
+```{r}
+set.seed(50) # sets a seed for random number generator
+```
+
+####a)
+
+Randomly select 125 survivors and 125 nonsurvivors for our training set:
+```{r}
+# order the survivors (0 then 1)
+ordered_titanic = titanic.df[order(titanic.df$Survived),] # our data set to be worked on
+# we know there are 342 survivors, so 891-342=549 nonsurvivors
+train = c(sample(1:549,125),sample(550:891,125)) # training subset of 250 passengers
+```
+
+Now, we can use rpart to create a tree, using only "Sex" as an independent attribute. Our dependent attribute is "Survived", as we want to predict this attribute for other data sets.
+
+```{r, fig.align='center'}
+tree=rpart(SurvivedFactor~Sex,data=ordered_titanic,subset=train) # create tree
+fancyRpartPlot(tree, sub = "") # display tree
+```
+
+In the tree above, the uppermost number represents the dominant value for "Survived" attribute at that node, so 0 if there are more nonsurvivors than survivors at the current node and 1 for vice versa. The first node doesn't matter since it's a 50/50 split.
+
+The middle numbers represent the proportion of dead/survived members in a particular node (assuming the dependent attribute in the tree is "Survived")
+
+The lowest number represents the percentage of members at the current node vs the entire dataset the tree was built on.
+
+####b)
+
+Now we want to predict the "Survived" attribute of passengers NOT in the training subset (so use the dataframe minus the training subset for our test set).
+
+```{r}
+# display prediction information in a table
+# ordered_titanic[-train] returns rows in the ordered titanic dataset that is not indexed in the train vector, i.e. our test set
+table(predict(tree,ordered_titanic[-train,],type="class"),ordered_titanic[-train,"Survived"])
+```
+
+The predictions for the test set based on this particular tree is shown in a table form above.
+
+The rows represent if the "Survived" attribute is 0 or 1, i.e. if the passengers in the test set were predicted to survived or not. The columns represent if the passenger actually survived (1) or not (0).
+
+For this tree formed by only splitting males and females, $360/(360+68) = 84.1\%$ of nonsurvivors were predicted correctly, and $149/(149+64) = 70.0\%$ of survivors were predicted correctly, which is a decent performance for a tree with only one split.
 
