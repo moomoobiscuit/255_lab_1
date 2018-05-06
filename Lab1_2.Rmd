@@ -80,18 +80,6 @@ For this tree formed by only splitting males and females, $360/(360+68) = 84.1\%
 We use the same training set as before, so we can create our tree using rpart straight away.
 
 ```{r, fig.align='center'}
-tree2=rpart(SurvivedFactor~Pclass+Age+SibSp+Parch,data=ordered_titanic,subset=train) # create tree
-fancyRpartPlot(tree2, sub = "") # display tree
-```
-
-```{r}
-# display prediction information in a table
-# ordered_titanic[-train] returns rows in the ordered titanic dataset that is not indexed in the train vector, i.e. our test set
-table(predict(tree2,ordered_titanic[-train,],type="class"),ordered_titanic[-train,"Survived"])
-```
-
-with sex
-```{r, fig.align='center'}
 tree1=rpart(SurvivedFactor~Pclass+Age+SibSp+Parch+Sex,data=ordered_titanic,subset=train) # create tree
 fancyRpartPlot(tree1, sub = "") # display tree
 ```
@@ -103,3 +91,15 @@ table(predict(tree1,ordered_titanic[-train,],type="class"),ordered_titanic[-trai
 ```
 
 
+#####ii.
+
+```{r, fig.align='center'}
+tree2=rpart(SurvivedFactor~Pclass+Age+SibSp+Parch,data=ordered_titanic,subset=train) # create tree
+fancyRpartPlot(tree2, sub = "") # display tree
+```
+
+```{r}
+# display prediction information in a table
+# ordered_titanic[-train] returns rows in the ordered titanic dataset that is not indexed in the train vector, i.e. our test set
+table(predict(tree2,ordered_titanic[-train,],type="class"),ordered_titanic[-train,"Survived"])
+```
