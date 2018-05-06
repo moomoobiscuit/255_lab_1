@@ -107,12 +107,27 @@ It was established by the scatter plot that age does not matter for this particu
 
 ####d)
 
-I think attributes that would cluster survivors/nonsurvivors well are: the passenger class, age, siblings/spouses, parents/children.
+I think attributes that would cluster survivors/nonsurvivors well are: the passenger class, age, sex, siblings/spouses, parents/children.
 
-```{r, fig.height=6, fig.align='center'}
-# perform a k-means clustering with 20 iterations, using only the "Age" and "Fare" attributes
-titanicCluster = kmeans(titanic.df[c(6,10)], 2, nstart = 20, iter.max = 20)
+Lets try a clustering of 2 centres with pclass, age, sibsp, parch and sex, in hopes that our cluster will split survivors and nonsurvivors.
+If we want to cluster sex, which is non numeric attribute, we have to encode it, shown in the code below.
+```{r, fig.height=6, fig.width=10, fig.align='center'}
+# encode the "Sex" attribute and add it into the titanic dataframe
+titanic.df = within(titanic.df, {Sex_encoded = as.numeric(as.factor(titanic.df$Sex))})
+# perform a k-means clustering using "Pclass", "Age", "Sibsp", "Parch" and "Sex" (encoded) attributes
+# with 2 clusters and 20 iterations
+titanicCluster2 = kmeans(titanic.df[c(3,6,7,8,19)], 2, nstart = 20, iter.max = 20)
+table(titanicCluster2$cluster, titanic.df$SurvivedFactor)
+p = qplot(Age, Fare, data=titanic.df, colour = titanicCluster2$cluster, na.rm = TRUE)
+p + ggtitle("Fare vs Age for Titanic Passengers", subtitle = "with clusters 2") + ylim(0, 300)
 
+# with scaled vals
+titanicCluster3 = kmeans(scale(titanic.df[c(3,6,7,8,19)]), 2, nstart = 20, iter.max = 20)
+titanicCluster3$size    # size of each cluster
+# columns are survived/not survived, rows are the two clusters created
+table(titanicCluster3$cluster, titanic.df$SurvivedFactor)
+r = qplot(Age, Fare, data=titanic.df, colour = titanicCluster3$cluster, na.rm = TRUE)
+r + ggtitle("Fare vs Age for Titanic Passengers", subtitle = "with clusters 3") + ylim(0, 300)
 
 
 ```
