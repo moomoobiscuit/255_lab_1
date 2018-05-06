@@ -1,0 +1,105 @@
+---
+title: "ENGSCI 255 Lab 1"
+author: "Navindd Raj"
+date: "Due Date: 5pm Monday 7 May 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library("ggplot2")
+library("rpart")
+library("rpart.plot")
+library("rattle")
+library("gridExtra")
+theme_update(plot.title = element_text(hjust = 0.5))
+theme_update(plot.subtitle = element_text(hjust = 0.5))
+```
+
+##Question 1
+
+####Read in and inspect the data
+```{r, fig.height=3.75}
+titanic.df <- read.csv("titanic.csv",header=TRUE)
+
+# make "Survived" and "Pclass" into factors, as they are currently numerical
+titanic.df = within(titanic.df, {SurvivedFactor = factor(Survived)})
+titanic.df = within(titanic.df, {PclassFactor = factor(Pclass)})
+
+```
+
+##Question 3
+
+```{r}
+set.seed(50) # sets a seed for random number generator
+```
+
+####a)
+
+Randomly select 125 survivors and 125 nonsurvivors for our training set:
+```{r}
+# order the survivors (0 then 1)
+ordered_titanic = titanic.df[order(titanic.df$Survived),] # our data set to be worked on
+# we know there are 342 survivors, so 891-342=549 nonsurvivors
+train = c(sample(1:549,125),sample(550:891,125)) # training subset of 250 passengers
+```
+
+Now, we can use rpart to create a tree, using only "Sex" as an independent attribute. Our dependent attribute is "Survived", as we want to predict this attribute for other data sets.
+
+```{r, fig.align='center'}
+tree=rpart(SurvivedFactor~Sex,data=ordered_titanic,subset=train) # create tree
+fancyRpartPlot(tree, sub = "") # display tree
+```
+
+In the tree above, the uppermost number represents the dominant value for "Survived" attribute at that node, so 0 if there are more nonsurvivors than survivors at the current node and 1 for vice versa. The first node doesn't matter since it's a 50/50 split.
+
+The middle numbers represent the proportion of dead/survived datapoints in a particular node (assuming the dependent attribute in the tree is "Survived")
+
+The lowest number represents the percentage of datapoints at the current node vs the entire dataset the tree was built on.
+
+####b)
+
+Now we want to predict the "Survived" attribute of passengers NOT in the training subset (so use the dataframe minus the training subset for our test set).
+
+```{r}
+# display prediction information in a table
+# ordered_titanic[-train] returns rows in the ordered titanic dataset that is not indexed in the train vector, i.e. our test set
+table(predict(tree,ordered_titanic[-train,],type="class"),ordered_titanic[-train,"Survived"])
+```
+
+The predictions for the test set based on this particular tree is shown in a table form above.
+
+The rows represent if the "Survived" attribute is 0 or 1, i.e. if the passenger in the test set were predicted to survived or not. The columns represent if that particular passenger actually survived (1) or not (0).
+
+For this tree formed by only splitting males and females, $360/(360+68) = 84.1\%$ of nonsurvivors were predicted correctly, and $149/(149+64) = 70.0\%$ of survivors were predicted correctly, which is a decent performance for a tree with only one split.
+
+####c) Create four additional classification tress:
+
+#####i. With "Pclass", "Age", "Sibsp" and "Parch" and "Sex"
+
+We use the same training set as before, so we can create our tree using rpart straight away.
+
+```{r, fig.align='center'}
+tree2=rpart(SurvivedFactor~Pclass+Age+SibSp+Parch,data=ordered_titanic,subset=train) # create tree
+fancyRpartPlot(tree2, sub = "") # display tree
+```
+
+```{r}
+# display prediction information in a table
+# ordered_titanic[-train] returns rows in the ordered titanic dataset that is not indexed in the train vector, i.e. our test set
+table(predict(tree2,ordered_titanic[-train,],type="class"),ordered_titanic[-train,"Survived"])
+```
+
+with sex
+```{r, fig.align='center'}
+tree1=rpart(SurvivedFactor~Pclass+Age+SibSp+Parch+Sex,data=ordered_titanic,subset=train) # create tree
+fancyRpartPlot(tree1, sub = "") # display tree
+```
+
+```{r}
+# display prediction information in a table
+# ordered_titanic[-train] returns rows in the ordered titanic dataset that is not indexed in the train vector, i.e. our test set
+table(predict(tree1,ordered_titanic[-train,],type="class"),ordered_titanic[-train,"Survived"])
+```
+
+
