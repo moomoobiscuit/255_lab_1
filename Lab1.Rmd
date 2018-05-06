@@ -1,0 +1,126 @@
+---
+title: "ENGSCI 255 Lab 1"
+author: "Navindd Raj"
+date: "Due Date: 5pm Monday 7 May 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library("ggplot2")
+library("lattice")
+theme_update(plot.title = element_text(hjust = 0.5))
+theme_update(plot.subtitle = element_text(hjust = 0.5))
+```
+
+##Question 1
+
+####Read in and inspect the data
+```{r, fig.height=3.75}
+titanic.df <- read.csv("titanic.csv",header=TRUE)
+
+# inspect the different attributes of the data set given
+attributes(titanic.df)$names
+
+# make "Survived" and "Pclass" into factors, as they are currently numerical
+titanic.df = within(titanic.df, {SurvivedFactor = factor(Survived)})
+titanic.df = within(titanic.df, {PclassFactor = factor(Pclass)})
+
+```
+
+Some interesting attributes to check out at first might be: "Pclass", "Sex", "Age", "Fare". Hopefully this gives us a vague idea of the various factors that affected the survival rate during the Titanic accident. All the plots will include the "Survival" attribute as a third dimension, shown by colour. 
+
+```{r, fig.height=6, fig.width=10, fig.align='center'}
+# Fare vs Age
+p = qplot(Age, Fare, data=titanic.df, colour=SurvivedFactor, na.rm=TRUE) 
+p + ggtitle("Fare vs Age for Titanic Passengers") + geom_point(alpha = 0.5, na.rm=TRUE) + ylim(0, 300)
+```
+
+This plot looks pretty normal, with no visible significant trend in survival rate. However, we can see a region with high "red" density (corresponding to passengers that did not survive) in the Fare 0-25, Age 17-57 area on the plot. Let's see if we can find something that backs this up more later on. 
+I shortened the y-axis to make the plot more readable in the lower regions, but there were 3 data points that were outside this range (paid a high fare of over 500). Their ages were between 30 and 40, and all three survived. 
+
+**For the next two plots below, please ignore the central line down each factor on the plot, not sure how to remove it but it's just the jittered data combined into one point.**
+
+```{r, fig.height=6, fig.width=10, fig.align='center'}
+# Pclass vs Fare
+# The three points that aren't in range were all class 1 and all survived
+q = qplot(PclassFactor, Fare, data=titanic.df, colour=SurvivedFactor, na.rm=TRUE)
+q + geom_jitter(alpha = 0.75, na.rm=TRUE) + ggtitle("Passenger Class vs Fare") + ylim(0, 300) 
+```
+
+This plot gives a much stronger correlation to survival rates than the fare vs age plot. We can see the majority of passengers in Class 1 survived, while many from Class 2 survived as well, apart from the people at the very bottom with the lowest fare for Class 2. We can see in Class 3, the majority of passengers did not survive, especially so for those that paid the lowest fares. It is quite obvious here that Class 1 is the highest class. Class 2 and Class 3 have similar fare ranges but the survival rate of Class 3 is much lower than that of Class 2... perhaps the location of the cabins of those classes were different such that Class 3 had a lower survival rate?
+Again, 3 data points are missing, but they were all in Class 1 and all survived. 
+
+```{r, fig.height=6, fig.width=10, fig.align='center'}
+# Sex vs Age
+r = qplot(Sex, Age, data=titanic.df, colour=SurvivedFactor)
+r + geom_jitter(alpha = 0.75) + ggtitle("Sex vs Age")
+```
+
+This is probably the most profound plot for this data set. We can see a clear correlation between the survival rate of males and females on the ship (1912 chivalry at its finest?). Nothing much can be said about young children under the age of 10, but looking at the under 10's of the males, it's safe to say there is a lower density of red there than the rest of the males. 
+
+##Question 2
+```{r}
+set.seed(99) # sets a seed for random number generator
+```
+
+####a)
+```{r, fig.height=6, fig.align='center'}
+# perform a k-means clustering with 20 iterations, using only the "Age" and "Fare" attributes
+titanicCluster = kmeans(titanic.df[c(6,10)], 2, nstart = 20, iter.max = 20)
+```
+
+Some information about the clustering:
+
+```{r, fig.height=6, fig.align='center'}
+titanicCluster$size    # size of each cluster
+titanicCluster$centers    # means of each cluster
+```
+
+As you can see, the clustering is very skewed (53 in one cluster, 838 members in the other cluster). Looking at the cluster means, the ages do not vary too much but the fare paid by cluster 1 is much higher than that of cluster 2. 
+Let's look at a table to see who survived/didn't survive in each cluster:
+
+```{r, fig.height=6, fig.align='center'}
+# columns are survived/not survived, rows are the two clusters created
+table(titanicCluster$cluster, titanic.df$SurvivedFactor)
+```
+
+It seems the clustering didn't work too well to differentiate between who survived or not...
+
+The rate of survival in cluster 1 is $39/(39+14) = 73.6\%$
+
+The rate of survival in cluster 2 is $303/(303+535) = 36.2\%$
+
+####b)
+```{r, fig.height=6, fig.width=10, fig.align='center'}
+# scatter plot of the two clusters in Age vs Fare attributes
+titanicCluster$cluster <- as.factor(titanicCluster$cluster)
+q = qplot(Age, Fare, data=titanic.df, colour = titanicCluster$cluster, na.rm = TRUE)
+q + ggtitle("Fare vs Age for Titanic Passengers", subtitle = "with clusters") + ylim(0, 300)
+```
+
+From the clustering algorithm and plot, we can see that cluster 1 has a significantly rate of survival than cluster 2. Through the plot, we can see that cluster 1 consists of people whos fare cost more than \$100, and cluster 2 consists of people whos fare is less than \$100, regardless of age. The conclusion drawn from this particular clustering is that people who had a higher fare had a higher chance of survival than those that paid a lesser fare. 
+
+####c)
+
+It was established by the scatter plot that age does not matter for this particular clustering, and a fare of $20 would put the passenger in cluster 2. This means they have a 36.2% chance of survival, based solely on this clustering. 
+
+####d)
+
+I think attributes that would cluster survivors/nonsurvivors well are: the passenger class, age, siblings/spouses, parents/children.
+
+```{r, fig.height=6, fig.align='center'}
+# perform a k-means clustering with 20 iterations, using only the "Age" and "Fare" attributes
+titanicCluster = kmeans(titanic.df[c(6,10)], 2, nstart = 20, iter.max = 20)
+
+
+
+```
+
+
+
+
+
+
+
+
