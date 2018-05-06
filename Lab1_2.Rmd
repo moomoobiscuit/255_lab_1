@@ -75,7 +75,7 @@ For this tree formed by only splitting males and females, $360/(360+68) = 84.1\%
 
 ####c) Create four additional classification tress:
 
-#####i. With "Pclass", "Age", "Sibsp" and "Parch" and "Sex"
+#####i. With "Pclass", "Age", "Sibsp", "Parch" and "Sex"
 
 We use the same training set as before, so we can create our tree using rpart straight away.
 
@@ -91,7 +91,9 @@ table(predict(tree1,ordered_titanic[-train,],type="class"),ordered_titanic[-trai
 ```
 
 
-#####ii.
+#####ii. With "Pclass", "Age", "Sibsp" and "Parch"
+
+What happens when we remove a strong factor of decision?
 
 ```{r, fig.align='center'}
 tree2=rpart(SurvivedFactor~Pclass+Age+SibSp+Parch,data=ordered_titanic,subset=train) # create tree
