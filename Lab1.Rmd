@@ -2,7 +2,7 @@
 title: "ENGSCI 255 Lab 1"
 author: "Navindd Raj"
 date: "Due Date: 5pm Monday 7 May 2018"
-output: html_document
+output: github_document
 ---
 
 ```{r setup, include=FALSE}
