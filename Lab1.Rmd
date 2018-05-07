@@ -62,6 +62,8 @@ r + geom_jitter(alpha = 0.75) + ggtitle("Sex vs Age")
 
 This is probably the most profound plot for this data set. We can see a clear correlation between the survival rate of males and females on the ship (women and children first). Nothing much can be said about young children under the age of 10, but looking at the under 10's of the males, it's safe to say there is a lower density of red there than the rest of the males. 
 
+***
+
 ##Question 2
 ```{r}
 set.seed(99) # sets a seed for random number generator
@@ -275,13 +277,15 @@ Without knowing the sex of a passenger, the k-means clustering algorithm believe
 
 In the end, it appears that the sex of passengers really is important for the k-means clustering algorithm to give a good determination of which passengers survive or not. 
 
+***
+
 ##Question 3
 
 ```{r}
 set.seed(50) # sets a seed for random number generator
 ```
 
-####a)
+####**a) Create a classification tree:**
 
 Randomly select 125 survivors and 125 nonsurvivors for our training set:
 ```{r}
@@ -295,16 +299,16 @@ Now, we can use rpart to create a tree, using only "Sex" as an independent attri
 
 ```{r, fig.align='center'}
 tree=rpart(SurvivedFactor~Sex,data=ordered_titanic,subset=train) # create tree
-fancyRpartPlot(tree, sub = "") # display tree
+fancyRpartPlot(tree, sub = "Tree using only Sex as the independent variable") # display tree
 ```
 
 In the tree above, the uppermost number represents the dominant value for "Survived" attribute at that node, so 0 if there are more nonsurvivors than survivors at the current node and 1 for vice versa. The first node doesn't matter since it's a 50/50 split.
 
-The middle numbers represent the proportion of dead/survived members in a particular node (assuming the dependent attribute in the tree is "Survived")
+The middle numbers represent the proportion of dead/survived datapoints in a particular node (assuming the dependent attribute in the tree is "Survived")
 
-The lowest number represents the percentage of members at the current node vs the entire dataset the tree was built on.
+The lowest number represents the percentage of datapoints at the current node vs the entire dataset the tree was built on.
 
-####b)
+####**b) Predictions using the classification tree:**
 
 Now we want to predict the "Survived" attribute of passengers NOT in the training subset (so use the dataframe minus the training subset for our test set).
 
@@ -316,7 +320,125 @@ table(predict(tree,ordered_titanic[-train,],type="class"),ordered_titanic[-train
 
 The predictions for the test set based on this particular tree is shown in a table form above.
 
-The rows represent if the "Survived" attribute is 0 or 1, i.e. if the passengers in the test set were predicted to survived or not. The columns represent if the passenger actually survived (1) or not (0).
+The rows represent if the "Survived" attribute is 0 or 1, i.e. if the passenger in the test set were predicted to survived or not. The columns represent if that particular passenger actually survived (1) or not (0).
 
 For this tree formed by only splitting males and females, $360/(360+68) = 84.1\%$ of nonsurvivors were predicted correctly, and $149/(149+64) = 70.0\%$ of survivors were predicted correctly, which is a decent performance for a tree with only one split.
 
+####**c) Create four additional classification trees:**
+
+#####i. With "Pclass", "Age", "Sibsp" and "Parch" and "Sex"
+
+We use the same training set as before, so we can create our tree using rpart straight away. At first lets try a lot of attributes to give us a general idea of what the tree looks like. 
+
+```{r, fig.align='center'}
+tree1 = rpart(SurvivedFactor~PclassFactor+Age+SibSp+Parch+Sex,data=ordered_titanic,subset=train) # create tree
+fancyRpartPlot(tree1, sub = "Tree using PClass, Age, SibSp, Parch and Sex as the independent variables") # display tree
+```
+
+With the default settings, rpart has constructed a tree of depth four. It did not use the "Parch" attribute in the tree construction, which means including it would not improve the fit of the tree. This could mean that the number of children a parent had (or if a passenger had parents on board) was the smallest factor out of all five factors chosen to construct this tree. In the lowest level, we see many of the leaves of the tree have a very low percentage of the datapoints in the dataset. This could mean we have slightly overfitted.  
+
+#####ii. With "Pclass", "Age", "Sibsp" and "Parch"
+
+What happens when we remove a strong factor of decision (the sex of a passenger)?
+
+```{r, fig.align='center'}
+tree2 = rpart(SurvivedFactor~PclassFactor+Age+SibSp+Parch,data=ordered_titanic,subset=train) # create tree
+fancyRpartPlot(tree2, sub = "Tree using PClass, Age, SibSp and Parch as the independent variables") # display tree
+```
+
+In question 1, on the plot of Passenger Class vs Fare, we noticed that though the fares for Pclass 2 and 3 were very similar, even having similar distributions, the rate of survival was much lower in Pclass 3 compared to Pclass 2. In the tree above, we notice that the first split is actually whether a passenger was in Class 3 or not, putting Class 1 and 2 on the same "side" of the tree. This could be further evidence to Class 3 having an unfortunate location with respect to the accident. 
+
+From this tree we can also see that for passengers under the age of 16 on Class 3, they still had a slightly higher rate of survival than the average rate of survival for passengers in Class 1 and 2, showing that children were prioritised first during the evacuation. 
+
+
+#####iii. With "Pclass" and "Embarked"
+
+Let's try dive deeper into the Class 3 mystery, now constructing a classification tree using the passenger class and the port embarked from, to see if we get any more meaningful results. 
+
+```{r, fig.align='center'}
+tree3 = rpart(SurvivedFactor~PclassFactor+Embarked,data=ordered_titanic,subset=train) # create tree
+fancyRpartPlot(tree3, sub = "Tree using PClass and Embarked as the independent variables") # display tree
+```
+
+We see that for this training data, if you weren't in Class 3, your rate of survival is 66% off the bat. However, if you were in Class 3, and you embarked from port Q (Queenstown), you *also* had around the same percentage of surviving as if you weren't in Class 3, while passengers in Class 3 who embarked from C or S (Cherbourg and Southhampton) had only a 28% chance of surviving.
+
+What's interesting is that if you look at a map of the Titanic's voyage where it sunk, you can see that it started at port S, then to port C and then to port Q (Queenstown was the last port of embarkation before heading to New York). Reference: https://fi.wikipedia.org/wiki/Tiedosto:TitanicRoute.svg
+
+But people in Class 3 who boarded from Queenstown had a really high percentage of survival compared to those that embarked from the other two ports. Note that only 16% of Class 3 passengers embarked from Queenstown. This observation further strengthens the theory that the location of the Class 3 cabins mattered, and it seems like people who embarked from Southampton and Cherbourg got the "worse" cabins. 
+
+#####iv. With "Age" and "Fare"
+
+```{r, fig.align='center'}
+tree4 = rpart(SurvivedFactor~Age+Fare,data=ordered_titanic,subset=train) # create tree
+fancyRpartPlot(tree4, sub = "Tree using Age and Fare as the independent variables") # display tree
+```
+
+This tree definitely looks overfitted, but lets check the predictions later on anyway and see if we can change the stopping criteria to give a better fit to test data.
+
+####**d) Predictions using the previous classification trees:**
+
+#####i. With "Pclass", "Age", "Sibsp" and "Parch" and "Sex"
+
+```{r}
+# display prediction information in a table
+table(predict(tree1,ordered_titanic[-train,],type="class"),ordered_titanic[-train,"Survived"])
+```
+
+This tree predicts $311/(311+33) = 90.4\%$ of nonsurvivors correctly, and $184/(184+113) = 62.0\%$ of survivors correctly. While (compared to the first tree in part a)) this tree predicted a higher percentage of nonsurvivors correctly, it actually performed worse than the first tree with only one split for predicting survivors. This means we potentially overfitted the tree, meaning it is too specific to our training data, and performs worse on unseen test data. 
+
+We could try pruning this tree by 1 layer to see if it performs better: 
+
+```{r, fig.align='center'}
+tree1Pruned = prune.rpart(tree1,cp=0.024)
+fancyRpartPlot(tree1Pruned, sub="Tree 1 pruned by 1 layer")
+table(predict(tree1Pruned,ordered_titanic[-train,],type="class"),ordered_titanic[-train,"Survived"])
+```
+
+The percentage accuracy for both survivor and nonsurvivor predictions does not increase by much so let's leave this tree alone. 
+
+#####ii. With "Pclass", "Age", "Sibsp" and "Parch"
+
+```{r}
+# display prediction information in a table
+table(predict(tree2,ordered_titanic[-train,],type="class"),ordered_titanic[-train,"Survived"])
+```
+
+This tree predicts $289/(289+60) = 82.8\%$ of nonsurvivors correctly, and $157/(157+135) = 53.8\%$ of survivors correctly. The performance of this tree has dropped after removing the (arguably) most important attribute of the datapoints, the sex of the passenger. This tells us that we should definitely keep the sex attribute for future tree constructions for this dataset, if we want accurate predictions. 
+
+#####iii. With "Pclass" and "Embarked"
+
+```{r}
+# display prediction information in a table
+table(predict(tree3,ordered_titanic[-train,],type="class"),ordered_titanic[-train,"Survived"])
+```
+
+This tree predicts $251/(251+62) = 80.2\%$ of nonsurvivors correctly, and $155/(155+173) = 47.3\%$ of survivors correctly. So even though there are some interesting observations we can draw from looking at this tree, in reality it is not really a good way to accurately determine the survival of someone outside the training set. These low percentage accuracies also remove significance of our observations. We could try to construct the same tree again with larger training dataset and see if it is more accurate, but for our current training set it is not good for prediction. 
+
+#####iv. With "Age" and "Fare"
+
+```{r}
+# display prediction information in a table
+table(predict(tree4,ordered_titanic[-train,],type="class"),ordered_titanic[-train,"Survived"])
+```
+
+This tree predicts $272/(272+76) = 78.2\%$ of nonsurvivors correctly, and $141/(141+152) = 48.1\%$ of survivors correctly, which is not very strong. As said before, this could be due to a result of overfitting, so lets try and refit the tree with stopping criteria of a depth of 3. 
+
+```{r, fig.align='center'}
+tree4_1 = rpart(SurvivedFactor~Age+Fare,data=ordered_titanic,subset=train, control =  rpart.control(maxdepth = 3)) # create tree
+fancyRpartPlot(tree4_1, sub = "Tree using Age and Fare as the independent variables, max depth of 3") # display tree
+```
+
+Again, we can see children under the age of 16 were of high priority for evacuation. However, we can also see a strange thing happening from node 6 to node 12 and 13: if your fare was less than $53, you had a 55% chance of survival, but if your fare was in between \$39 and \$53, the rate of survival was only 22%, while if your fare was less than \$39 your rate of survival was 58%. This could just be due to the random nature of sampling so in order to be confident about our trees (any of them) for prediction we should try to sample more and maybe do cross validations. 
+
+```{r}
+# display prediction information in a table
+table(predict(tree4_1,ordered_titanic[-train,],type="class"),ordered_titanic[-train,"Survived"])
+```
+
+The new tree predicts $206/(206+37) = 84.8\%$ of nonsurvivors correctly, and $180/(180+218) = 45.2\%$ of survivors correctly, which is still not great for prediction. One conclusion we can draw from this is that for a given passenger in a test set, the age and fare paid by that passenger is not enough information in determining whether or not they would have survived the titanic incident or not. 
+
+______________________________________________________________________________________________________________________
+
+Overall, I think the best tree would definitely include the attributes "Age" "Pclass", "Sex", "Embarked" and "SibSp", as they seem to be the ones with the most clear cut results. 
+
+In general, if we want to make a good classification tree, we should train with lots of data and cross validate our training sets to give more accurate predictions for unseen data in test sets. 
