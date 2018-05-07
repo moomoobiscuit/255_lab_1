@@ -77,7 +77,7 @@ For this tree formed by only splitting males and females, $360/(360+68) = 84.1\%
 
 ####**c) Create four additional classification trees:**
 
-#####i. With "Pclass", "Age", "Sibsp" and "Parch" and "Sex"
+#####i. With "Pclass", "Age", "Sibsp", "Parch" and "Sex"
 
 We use the same training set as before, so we can create our tree using rpart straight away. At first lets try a lot of attributes to give us a general idea of what the tree looks like. 
 
@@ -137,7 +137,13 @@ table(predict(tree1,ordered_titanic[-train,],type="class"),ordered_titanic[-trai
 
 This tree predicts $311/(311+33) = 90.4\%$ of nonsurvivors correctly, and $184/(184+113) = 62.0\%$ of survivors correctly. While (compared to the first tree in part a)) this tree predicted a higher percentage of nonsurvivors correctly, it actually performed worse than the first tree with only one split for predicting survivors. This means we potentially overfitted the tree, meaning it is too specific to our training data, and performs worse on unseen test data. 
 
+<<<<<<< HEAD
 We could try pruning this tree by 1 layer to see if it performs better: 
+=======
+#####ii. With "Pclass", "Age", "Sibsp" and "Parch"
+
+What happens when we remove a strong factor of decision?
+>>>>>>> 316827e02cb295cc65daa5cf2bbaec583712d40a
 
 ```{r, fig.align='center'}
 tree1Pruned = prune.rpart(tree1,cp=0.024)
