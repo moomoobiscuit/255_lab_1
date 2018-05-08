@@ -1,6 +1,6 @@
 # 255 Lab 1 (data visualisation, clustering, classification trees)
 
-My submission for the first DA lab for ENGSCI233. It's about analysing the Titanic dataset using basic
+My submission for the first DA lab for ENGSCI255. It's about analysing the Titanic dataset using basic
 data science algorithms like k-means clustering and creating classification trees from a training set to 
 predict future data attributes from a test set.
 
